@@ -26,6 +26,22 @@ function calculateSimpleRevenue(purchase, _product) {
  */
 function calculateBonusByProfit(index, total, seller) {
     // @TODO: Расчет бонуса от позиции в рейтинге
+    // const profit = seller.profit
+    const { profit } = seller; // Достаем прибыль продавца
+
+    if (index === 0) {
+        // 15% — для первого места
+        return profit * 0.15;
+    } else if (index === 1 || index === 2) {
+        // 10% — для второго и третьего места
+        return profit * 0.10;
+    } else if (index === total - 1) {
+        // 0% — для последнего места (сравниваем индекс с длиной массива - 1)
+        return 0;
+    } else {
+        // 5% — для всех остальных
+        return profit * 0.05;
+    }
 }
 
 /**
@@ -88,6 +104,7 @@ function analyzeSalesData(data, options) {
 
     // @TODO: Расчет выручки и прибыли для каждого продавца
     data.purchase_records.forEach(record => { // Чек
+
         // 1. Находим продавца в нашем быстром справочнике и смотрим чеки
         const seller = sellerIndex[record.seller_id]; // Продавец
 
@@ -102,6 +119,7 @@ function analyzeSalesData(data, options) {
 
         // Расчёт прибыли для каждого товара
         record.items.forEach(item => {
+
             // Находим информацию о товаре в справочнике товаров по SKU
             const product = productIndex[item.sku]; // Товар // [item.sku] из data.purchase_records в items
 
@@ -129,8 +147,21 @@ function analyzeSalesData(data, options) {
     });
 
     // @TODO: Сортировка продавцов по прибыли
+    sellerStats.sort((a, b) => b.profit - a.profit); // Сортируем продавцов по прибыли (от большего к меньшему)
 
     // @TODO: Назначение премий на основе ранжирования
+    sellerStats.forEach((seller, index) => {
+        // 1. Считаем бонус через наш колбэк
+        // Передаем текущий индекс, общее кол-во продавцов и объект продавца
+        seller.bonus = calculateBonus(index, sellerStats.length, seller);
+        // 2. Формируем топ-10 товаров (цепочка методов)
+        seller.top_products = Object.entries(seller.products_sold) // [[sku, q], [sku, q]] Берем объект и «разрезаем» его на пары массивов
+            .map(([sku, quantity]) => ({ sku, quantity }))         // [{sku, quantity}, ...] Делаем красивые мини-объекты
+            .sort((a, b) => b.quantity - a.quantity)               // Сортируем товары по популярности (по убыванию)
+            .slice(0, 10);                                         // Берем элементы с 0-го по 9-й (отрезаем лишнее)
+
+    });
+    // console.log(sellerStats);
 
     // @TODO: Подготовка итоговой коллекции с нужными полями
 }
